@@ -39,6 +39,8 @@ static struct cdev      kmod_cdev;
 struct block_rw_ops rw_request;
 struct block_rwoffset_ops rwoffset_request;
 
+long rw_usb(char* data, unsigned int size, unsigned int  offset, bool flag);
+
 bool kmod_ioctl_init(void);
 void kmod_ioctl_teardown(void);
 
@@ -50,15 +52,63 @@ static long kmod_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
         case BREAD:
         case BWRITE:
             /* Get request from user */
-            /* Allocate a kernel buffer to read/write user data */        
+            if (copy_from_user((void*) &rw_request, (void*) arg, sizeof(struct block_rw_ops))) {
+                printk("Error: Incorrect request parameters.\n");
+                return -1;
+            }
+
+            /* Debugging */
+            printk("REQUEST: RW (%p, %d)\n", rw_request.data, rw_request.size);
+
+            /* Allocate a kernel buffer to read/write user data */
+            kernbuf = (char*) vmalloc(rw_request.size);
+            // kernbuf = (char*) kmalloc(rw_request.size);
+            
+            if (IS_ERR(kernbuf)) {
+                printk("error: could not allocate memory for the write operation.\n");
+                return -1;
+            }
+
             /* Perform the block operation */
+
+            if (cmd == BWRITE) { 
+            //     /* WRITE */
+            //     TODO: Use copy_from_user() to copy rw_request.size bytes from rw_request.data into kernbuf
+            //     TODO: Call rw_usb()
+            } else {
+            //     /* READ */
+            //     TODO: Call rw_usb()
+            //     TODO: Use copy_to_user() to transfer rw_request.size bytes    
+            }
+
             return 0;
 
         case BREADOFFSET:
         case BWRITEOFFSET:
             /* Get request from user */
+            if (copy_from_user((void*) &rwoffset_request, (void*) arg, sizeof(struct block_rwoffset_ops))) {
+                printk("Error: Incorrect request parameters.\n");
+                return -1;
+            }
+
+            /* Debugging */
+            printk("REQUEST: RWOFFSET (%p, %d, %d)\n", 
+                rwoffset_request.data, 
+                rwoffset_request.size,
+                rwoffset_request.offset);
+
+            // TODO: Refer to the case BWRITE to complete this block of code
             /* Allocate a kernel buffer to read/write user data */
+
             /* Perform the block operation */
+            if (cmd == BWRITEOFFSET) {  
+                /* WRITEOFFSET */
+                // TODO
+            } else {
+                /* READOFFSET */
+                //TODO
+            }
+            
             return 0;
         default: 
             printk("Error: incorrect operation requested, returning.\n");
