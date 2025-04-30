@@ -75,10 +75,26 @@ static long kmod_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
             //     /* WRITE */
             //     TODO: Use copy_from_user() to copy rw_request.size bytes from rw_request.data into kernbuf
             //     TODO: Call rw_usb()
+
+            //  copy_from_user(void* to, const void __user *from, unsigned long count);
+                if (copy_from_user(kernbuf, rw_request.data, rw_request.size)) {
+                    printk("Error: Couldn't copy data from userspace for BWRITE\n");
+                    return -1;
+                }
+                rw_usb(kernbuf, rw_request.size, -1, 1);
+                vfree(kernbuf);
+
             } else {
             //     /* READ */
             //     TODO: Call rw_usb()
-            //     TODO: Use copy_to_user() to transfer rw_request.size bytes    
+            //     TODO: Use copy_to_user() to transfer rw_request.size bytes
+
+                if (copy_from_user(kernbuf, rw_request.data, rw_request.size)) {
+                    printk("Error: Couldn't copy data from userspace for BREAD\n");
+                    return -1;
+                }
+                rw_usb(kernbuf, rw_request.size, -1, 0);
+                vfree(kernbuf);    
             }
 
             return 0;
@@ -99,14 +115,27 @@ static long kmod_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
 
             // TODO: Refer to the case BWRITE to complete this block of code
             /* Allocate a kernel buffer to read/write user data */
+            kernbuf = (char*) vmalloc(rwoffset_request.size);
 
             /* Perform the block operation */
             if (cmd == BWRITEOFFSET) {  
                 /* WRITEOFFSET */
                 // TODO
+                if (copy_from_user(kernbuf, rwoffset_request.data, rwoffset_request.size)) {
+                    printk("Error: Couldn't copy data from userspace for BWRITEOFFSET\n");
+                    return -1;
+                }
+                rw_usb(kernbuf, rwoffset_request.size, rwoffset_request.offset, 1);
+                vfree(kernbuf);
             } else {
                 /* READOFFSET */
                 //TODO
+                if (copy_from_user(kernbuf, rwoffset_request.data, rwoffset_request.size)) {
+                    printk("Error: Couldn't copy data from userspace for BREADOFFSET\n");
+                    return -1;
+                }
+                rw_usb(kernbuf, rwoffset_request.size, rwoffset_request.offset, 0);
+                vfree(kernbuf); 
             }
             
             return 0;
