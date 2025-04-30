@@ -20,7 +20,9 @@ if [[ $1 == *"-variable" ]]; then
 fi
 
 # Check which /dev entry contains the USB device
-dpath=/dev/`lsblk | grep " 1G " | cut -d ' ' -f 1`
+# dpath=/dev/`lsblk | grep " 1G " | cut -d ' ' -f 1`
+dpath="/dev/$(lsblk -n -o NAME,SIZE,TYPE | awk '$2 == "1G" && $3 == "disk" {print $1; exit}')"
+# echo "dpath: $dpath"
 
 # Cleaning the device 
 echo "Cleaning Device"
