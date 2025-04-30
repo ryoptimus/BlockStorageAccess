@@ -23,7 +23,8 @@ MODULE_DESCRIPTION("Block abstraction read/write for a USB device.");
 MODULE_VERSION("1.0");
 
 /* USB device name argument */
-char* device = "/dev/sdb";
+char* device = "/dev/sda";
+// S_IRUGO for a parameter that can be read by the world (user, group, other) but not changed
 module_param(device, charp, S_IRUGO);
 
 unsigned int cur_dev_sector = 0;
@@ -39,23 +40,28 @@ long rw_usb(char* data, unsigned int size, unsigned int  offset, bool flag);
 
 static bool open_usb(void)
 {
-    /* Open a file for the path of the usb */
+    /* Open a file for the path of the USB */
     usb_file = bdev_file_open_by_path(device, BLK_OPEN_READ | BLK_OPEN_WRITE, NULL, NULL);
     if (IS_ERR(usb_file)) {
-        printk("error: failed to open the device (%s) using bdev_file_open_by_path().\n",
-               device);
+        printk("error: failed to open the device (%s) using bdev_file_open_by_path().\n", device);
         usb_file = NULL;
         return false;
     }
     bdevice = file_bdev(usb_file);
     
-    /* Perform various sanity checks to make sure the device works */
+    /* Perform various checks to make sure the device works */
     if (IS_ERR(bdevice) || !bdevice) {
         printk("error: failed to open the device (%s) using lookup_bdev().\n", device);
         return false;
     }
     printk("success: opened %s as a block device.\n", bdevice->bd_disk->disk_name);
 
+    /*
+        GFP_NOIO or GFP_NOFS:
+        Historically, they were used to prevent recursion deadlocks caused by direct memory reclaim 
+        calling back into the FS or IO paths and blocking on already held resources.
+        (https://www.kernel.org/doc/html/v5.0/core-api/gfp_mask-from-fs-io.html)
+    */
     usb_bio = bio_alloc(bdevice, 256, REQ_OP_WRITE, GFP_NOIO);
     if (!usb_bio || IS_ERR(usb_bio)) {
         printk("error: failed to allocate a bio structure.\n");
@@ -80,6 +86,8 @@ long rw_usb(
 
     unsigned int page_offset = 0;
     int bio_add_page_result = 0;
+
+    printk("Entering rw_usb!\n");
 
     /* Sanity check */
     if (IS_ERR(data)) {
