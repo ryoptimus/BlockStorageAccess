@@ -174,15 +174,18 @@ long rw_usb(
         // static int __bio_add_page(struct request_queue *q, struct bio *bio, struct page *page, unsigned int len, unsigned int offset, unsigned short max_sectors);
         // and after all of that, bio_add_page just returns len. kayyyyy
         // it's mutating the bio structure, not actually adding a page
-        bio_add_page_result = bio_add_page(usb_bio, vmalloc_to_page(data), chunk_size, page_offset);
+        bio_add_page_result = bio_add_page(usb_bio, vmalloc_to_page(data + processed), chunk_size, page_offset);
         if (bio_add_page_result != (int)chunk_size) {
-            printk("bio_add_page failed.\n");
+            printk("error: bio_add_page failed.\n");
+            // bio_put(usb_bio);
+            return processed;
         }
       
         /* Submit BIO and wait for op completion */
         len = submit_bio_wait(usb_bio);
         if (len < 0) {
             printk("error: bio communication failed (ret = %d)\n", len);
+            // bio_put(usb_bio);
             return processed;
         }
         bio_reset(usb_bio, bdevice, FMODE_WRITE);
@@ -200,10 +203,11 @@ long rw_usb(
         // TODO: If page_offset reaches one page, increment 'data'
         // TODO: Reset page_offset
         if (page_offset >= PAGE_SIZE) {
-            data += PAGE_SIZE;
+            // data += PAGE_SIZE;
+            // ^ not needed if doing data+processed for vmalloc_to_page? i think.
             page_offset = 0;
         }
-        // ^ deeply uncertain about this....
+
     }
 
     return processed;
@@ -214,9 +218,9 @@ static void close_usb(void)
     /* Close the file and device communication interface */
 
     // Release the reference to usb_bio
-    if (usb_bio) {
-        bio_put(usb_bio);
-    }
+    // if (usb_bio) {
+        // bio_put(usb_bio);
+    // }
     // ^unsure if i need this
 
     // TODO: Check if the usb_file is valid
