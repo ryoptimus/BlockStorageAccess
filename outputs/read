@@ -1,5 +1,4 @@
 Testcase: read
-[X] FAILED 
-[.]     Expected: Goodbye from CSE330!
+[*] PASSED 
+[.]     Message: Goodbye from CSE330!
 
-[.]     Received: 
