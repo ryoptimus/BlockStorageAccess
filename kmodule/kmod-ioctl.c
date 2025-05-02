@@ -171,6 +171,8 @@ static struct file_operations fops =
 bool kmod_ioctl_init(void) {
 
     /* Allocate a character device. */
+    // Really allocating and registering the range of char device numbers
+    // int alloc_chrdev_region(dev_t *dev, unsigned int firstminor, unsigned int count, char *name);
     if (alloc_chrdev_region(&dev, 0, 1, "usbaccess") < 0) {
         printk("error: couldn't allocate \'usbaccess\' character device.\n");
         return false;
@@ -178,11 +180,15 @@ bool kmod_ioctl_init(void) {
 
     /* Initialize the chardev with my fops. */
     cdev_init(&kmod_cdev, &fops);
+
+    // Add the device to the system
+    // int cdev_add(struct cdev *p, dev_t dev, unsigned count);
     if (cdev_add(&kmod_cdev, dev, 1) < 0) {
         printk("error: couldn't add kmod_cdev.\n");
         goto cdevfailed;
     }
 
+    // Create sysfs class
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(6,2,16)
     if ((kmod_class = class_create(THIS_MODULE, "kmod_class")) == NULL) {
         printk("error: couldn't create kmod_class.\n");
@@ -195,6 +201,8 @@ bool kmod_ioctl_init(void) {
     }
 #endif
 
+    // Create a device node and register it with sysfs
+    // struct device * device_create(struct class *class, struct device *parent, dev_t devt, const char *fmt...);
     if ((device_create(kmod_class, NULL, dev, NULL, "kmod")) == NULL) {
         printk("error: couldn't create device.\n");
         goto classfailed;
