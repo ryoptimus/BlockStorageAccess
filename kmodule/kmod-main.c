@@ -136,16 +136,12 @@ long rw_usb(
             printk("offset is provided (bytes = %d, sector = %d)\n", offset, offset/512);
             // TODO: Set bi_iter.bi_sector
             usb_bio->bi_iter.bi_sector = offset/512;
-            // ^ does this need to be just offset? how is this counted?
 
             // TODO: Update cur_dev_sector value for future tracking
             cur_dev_sector = offset/512;
-            // ^ does this need to be just offset? how is this counted?
-            // should it be incremented?
 
             // TODO: Reset offset so it's not reused in next iteration
             offset = -1;
-            // ^ should this be reset to 0 instead?
            
         }
 
@@ -164,19 +160,24 @@ long rw_usb(
 
         // Add data to the bio in chunks of 512 bytes
         // TODO: Use bio_add_page() to add bytes at the correct offset
-        // Use vmalloc_to_page(data) to get the page from the virtual address
 
-        // int __must_check bio_add_page(struct bio *bio, struct page *page, unsigned len, unsigned off);
-        //      add_page runs bvec_set_page()
-        //      add_page changes bio->bi_iter.bi_size += len
-        //      add_page changes bio->bi_vcnt++
-        //      (used to add a page to an existing bio)
-        // bvec_set_page(struct bio_vec *bv, struct page *page, unsigned int len, unsigned int offset)
-        //      set_page sets bv->bv_page = page
-        //      set_page sets bv->bv_len = len
-        //      set_page sets bv->bv_offset = offset
-        // TODO: add bio_return_val var
-        bio_add_page(usb_bio, vmalloc_to_page(data), chunk_size, page_offset);
+        // Use vmalloc_to_page(data) to get the page from the virtual address
+        // vmalloc returns the page containing an address within a vmalloc'ed buffer. according to a rando on stack overflow
+        // https://stackoverflow.com/questions/55219941/does-vmalloc-to-page-returns-contiguous-physical-memory
+
+        // struct page *vmalloc_to_page(const void *vmalloc_addr) "walk[s] a vmap address to the struct page it maps"
+        // https://elixir.bootlin.com/linux/v4.5/source/mm/vmalloc.c#L234
+        // we're giving it our data var, which is a pointer to the malloc(BLOCKSIZE)'d buffer
+
+        // int bio_add_page(struct bio *bio, struct page *page, unsigned int len, unsigned int offset);
+        // ^ this just returns whatever __bio_add_page() returns for each request in the request queue. ffs
+        // static int __bio_add_page(struct request_queue *q, struct bio *bio, struct page *page, unsigned int len, unsigned int offset, unsigned short max_sectors);
+        // and after all of that, bio_add_page just returns len. kayyyyy
+        // it's mutating the bio structure, not actually adding a page
+        bio_add_page_result = bio_add_page(usb_bio, vmalloc_to_page(data), chunk_size, page_offset);
+        if (bio_add_page_result != (int)chunk_size) {
+            printk("bio_add_page failed.\n");
+        }
       
         /* Submit BIO and wait for op completion */
         len = submit_bio_wait(usb_bio);
@@ -212,7 +213,11 @@ static void close_usb(void)
 {
     /* Close the file and device communication interface */
 
-    bio_put(usb_bio);
+    // Release the reference to usb_bio
+    if (usb_bio) {
+        bio_put(usb_bio);
+    }
+    // ^unsure if i need this
 
     // TODO: Check if the usb_file is valid
     // TODO: Use bdev_fput() to release the file reference
