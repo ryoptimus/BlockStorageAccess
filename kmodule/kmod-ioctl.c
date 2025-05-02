@@ -73,10 +73,8 @@ static long kmod_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
 
             if (cmd == BWRITE) { 
             //     /* WRITE */
-            //     TODO: Use copy_from_user() to copy rw_request.size bytes from rw_request.data into kernbuf
-            //     TODO: Call rw_usb()
 
-            //  copy_from_user(void* to, const void __user *from, unsigned long count);
+            //  format: copy_from_user(void* to, const void __user *from, unsigned long count);
                 if (copy_from_user(kernbuf, rw_request.data, rw_request.size)) {
                     printk("Error: Couldn't copy data from userspace for BWRITE\n");
                     vfree(kernbuf);
@@ -87,11 +85,9 @@ static long kmod_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
 
             } else {
             //     /* READ */
-            //     TODO: Call rw_usb()
-            //     TODO: Use copy_to_user() to transfer rw_request.size bytes
 
                 rw_usb(kernbuf, rw_request.size, -1, 0);
-                // copy_to_user(void *to, const void __user *from, unsigned long count);
+                // format: copy_to_user(void *to, const void __user *from, unsigned long count);
                 if (copy_to_user(rw_request.data, kernbuf, rw_request.size)) {
                     printk("Error: Couldn't copy data to userspace for BREAD\n");
                     vfree(kernbuf);
@@ -116,14 +112,12 @@ static long kmod_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
                 rwoffset_request.size,
                 rwoffset_request.offset);
 
-            // TODO: Refer to the case BWRITE to complete this block of code
             /* Allocate a kernel buffer to read/write user data */
             kernbuf = (char*) vmalloc(rwoffset_request.size);
 
             /* Perform the block operation */
             if (cmd == BWRITEOFFSET) {  
                 /* WRITEOFFSET */
-                // TODO
                 if (copy_from_user(kernbuf, rwoffset_request.data, rwoffset_request.size)) {
                     printk("Error: Couldn't copy data from userspace for BWRITEOFFSET\n");
                     vfree(kernbuf);
@@ -133,7 +127,6 @@ static long kmod_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
                 vfree(kernbuf);
             } else {
                 /* READOFFSET */
-                //TODO
                 rw_usb(kernbuf, rwoffset_request.size, rwoffset_request.offset, 0);
                 if (copy_to_user(rwoffset_request.data, kernbuf, rwoffset_request.size)) {
                     printk("Error: Couldn't copy data to userspace for BREADOFFSET\n");
@@ -176,8 +169,8 @@ static struct file_operations fops =
 bool kmod_ioctl_init(void) {
 
     /* Allocate a character device. */
-    // Really allocating and registering the range of char device numbers
-    // int alloc_chrdev_region(dev_t *dev, unsigned int firstminor, unsigned int count, char *name);
+    //      Really allocating and registering the range of char device numbers
+    //      format: int alloc_chrdev_region(dev_t *dev, unsigned int firstminor, unsigned int count, char *name);
     if (alloc_chrdev_region(&dev, 0, 1, "usbaccess") < 0) {
         printk("error: couldn't allocate \'usbaccess\' character device.\n");
         return false;
@@ -187,7 +180,7 @@ bool kmod_ioctl_init(void) {
     cdev_init(&kmod_cdev, &fops);
 
     // Add the device to the system
-    // int cdev_add(struct cdev *p, dev_t dev, unsigned count);
+    //      format: int cdev_add(struct cdev *p, dev_t dev, unsigned count);
     if (cdev_add(&kmod_cdev, dev, 1) < 0) {
         printk("error: couldn't add kmod_cdev.\n");
         goto cdevfailed;
@@ -207,7 +200,7 @@ bool kmod_ioctl_init(void) {
 #endif
 
     // Create a device node and register it with sysfs
-    // struct device * device_create(struct class *class, struct device *parent, dev_t devt, const char *fmt...);
+    //      format: struct device * device_create(struct class *class, struct device *parent, dev_t devt, const char *fmt...);
     if ((device_create(kmod_class, NULL, dev, NULL, "kmod")) == NULL) {
         printk("error: couldn't create device.\n");
         goto classfailed;

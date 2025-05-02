@@ -205,7 +205,6 @@ long rw_usb(
             // ^ not needed if doing data+processed for vmalloc_to_page? i think.
             page_offset = 0;
         }
-
     }
 
     return processed;
