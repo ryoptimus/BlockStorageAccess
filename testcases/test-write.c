@@ -26,7 +26,7 @@ int main (int argc, char* argv[]) {
     char* msg_send = malloc(512);
     char* msg_recv = malloc(512);
 
-    snprintf(msg_send, BLOCKSIZE, "Goodbye from CSE330!\n");
+    snprintf(msg_send, BLOCKSIZE, "Goodbye from test-write!\n");
     bwrite(msg_send, BLOCKSIZE);
     close_kmod();
 

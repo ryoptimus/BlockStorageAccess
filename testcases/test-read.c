@@ -24,7 +24,7 @@ int main (int argc, char* argv[]) {
     
     char* device = argv[1];
     char* msg_send = malloc(BLOCKSIZE);
-    snprintf(msg_send, BLOCKSIZE, "Goodbye from CSE330!\n");
+    snprintf(msg_send, BLOCKSIZE, "Goodbye from test-read!\n");
     bwrite_using_dd(device, msg_send, BLOCKSIZE);
 
     char* msg_recv = malloc(BLOCKSIZE);
